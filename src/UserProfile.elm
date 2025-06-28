@@ -119,37 +119,42 @@ view model =
                     div [ class "error" ] [ text err ]
 
                 ( _, Just user, _ ) ->
-                    div []
-                        [ h1 [] [ text (Maybe.withDefault user.login user.name) ]
-                        , p []
-                            [ a [ href user.html_url, target "_blank" ] [ strong [] [ text ("@" ++ user.login) ] ]
-                            ]
-                        , p [] [ text (Maybe.withDefault "No bio provided" user.bio) ]
-                        , p [] [ text (Maybe.withDefault "No location provided" user.location) ]
-                        , p []
-                            [ case user.blog of
-                                Just blogUrl ->
-                                    let
-                                        url =
-                                            if String.startsWith "http://" blogUrl || String.startsWith "https://" blogUrl then
-                                                blogUrl
-
-                                            else
-                                                "https://" ++ blogUrl
-                                    in
-                                    a [ href url, target "_blank" ] [ text blogUrl ]
-
-                                Nothing ->
-                                    text "No blog provided"
-                            ]
-                        , img
-                            [ class "avatar"
-                            , src (Maybe.withDefault "" user.avatar_url)
-                            , alt ("Photo of " ++ user.login)
-                            ]
-                            []
-                        ]
+                    viewUser user
 
                 _ ->
                     text ""
+        ]
+
+
+viewUser : User -> Html msg
+viewUser user =
+    div []
+        [ h1 [] [ text (Maybe.withDefault user.login user.name) ]
+        , p []
+            [ a [ href user.html_url, target "_blank" ] [ strong [] [ text ("@" ++ user.login) ] ]
+            ]
+        , p [] [ text (Maybe.withDefault "No bio provided" user.bio) ]
+        , p [] [ text (Maybe.withDefault "No location provided" user.location) ]
+        , p []
+            [ Maybe.map
+                (\blogUrl ->
+                    let
+                        url =
+                            if String.startsWith "http://" blogUrl || String.startsWith "https://" blogUrl then
+                                blogUrl
+
+                            else
+                                "https://" ++ blogUrl
+                    in
+                    a [ href url, target "_blank" ] [ text blogUrl ]
+                )
+                user.blog
+                |> Maybe.withDefault (text "No blog provided")
+            ]
+        , img
+            [ class "avatar"
+            , src (Maybe.withDefault "" user.avatar_url)
+            , alt ("Photo of " ++ user.login)
+            ]
+            []
         ]
