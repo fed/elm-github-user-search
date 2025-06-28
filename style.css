@@ -1,0 +1,34 @@
+:root {
+  /* font families */
+  --token-font-family-sans-serif: -apple-system, system-ui, "Segoe UI", Roboto,
+    Noto, Oxygen-Sans, Ubuntu, Cantrell, "Helvetica Neue", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --token-font-family-monospace: ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Monaco, "Cascadia Mono", Consolas, "Liberation Mono", "Courier New",
+    monospace;
+
+  /* border-radius */
+  --token-border-radius-small: 3px;
+
+  /* colours */
+  --token-color-text: #172b4d;
+  --token-color-error-background: #ffebe6;
+  --token-color-error-border: #ff5630;
+}
+
+body {
+  font-family: var(--token-font-family-sans-serif);
+}
+
+.error {
+  background-color: var(--token-color-error-background);
+  border: 1px solid var(--token-color-error-border);
+  color: var(--token-color-text);
+  font-weight: bold;
+  padding: 1em;
+  border-radius: var(--token-border-radius-small);
+}
+
+.avatar {
+  border-radius: 100%;
+}
