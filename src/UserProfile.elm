@@ -55,7 +55,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         UsernameInput name ->
-            ( { model | username = name }, Cmd.none )
+            ( { model | username = String.trim name }, Cmd.none )
 
         Submit ->
             if String.isEmpty model.username then
