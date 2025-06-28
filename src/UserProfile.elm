@@ -22,6 +22,7 @@ type alias Model =
     { user : Maybe User
     , error : Maybe String
     , username : String
+    , loading : Bool
     }
 
 
@@ -45,7 +46,7 @@ userDecoder =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { user = Nothing, error = Nothing, username = "" }
+    ( { user = Nothing, error = Nothing, username = "", loading = False }
     , Cmd.none
     )
 
@@ -61,7 +62,7 @@ update msg model =
                 ( { model | error = Just "Please enter a username." }, Cmd.none )
 
             else
-                ( { model | error = Nothing, user = Nothing }
+                ( { model | error = Nothing, user = Nothing, loading = True }
                 , Http.get
                     { url = "https://api.github.com/users/" ++ model.username
                     , expect = Http.expectJson GotUser userDecoder
@@ -69,7 +70,7 @@ update msg model =
                 )
 
         GotUser (Ok user) ->
-            ( { model | user = Just user, error = Nothing }, Cmd.none )
+            ( { model | user = Just user, error = Nothing, loading = False }, Cmd.none )
 
         GotUser (Err httpError) ->
             let
@@ -90,7 +91,7 @@ update msg model =
                         Http.BadBody message ->
                             "Bad body: " ++ message
             in
-            ( { model | error = Just errorMsg }, Cmd.none )
+            ( { model | error = Just errorMsg, loading = False }, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -106,42 +107,49 @@ view model =
                 []
             , button [ type_ "submit" ] [ text "Search" ]
             ]
-        , case ( model.user, model.error ) of
-            ( Nothing, Nothing ) ->
-                text "Loading..."
+        , if model.loading then
+            text "Loading..."
 
-            ( Nothing, Just err ) ->
-                div [ class "error" ] [ text err ]
+          else
+            case ( model.username, model.user, model.error ) of
+                ( "", _, _ ) ->
+                    text ""
 
-            ( Just user, _ ) ->
-                div []
-                    [ h1 [] [ text (Maybe.withDefault user.login user.name) ]
-                    , p []
-                        [ a [ href user.html_url, target "_blank" ] [ strong [] [ text ("@" ++ user.login) ] ]
+                ( _, Nothing, Just err ) ->
+                    div [ class "error" ] [ text err ]
+
+                ( _, Just user, _ ) ->
+                    div []
+                        [ h1 [] [ text (Maybe.withDefault user.login user.name) ]
+                        , p []
+                            [ a [ href user.html_url, target "_blank" ] [ strong [] [ text ("@" ++ user.login) ] ]
+                            ]
+                        , p [] [ text (Maybe.withDefault "No bio provided" user.bio) ]
+                        , p [] [ text (Maybe.withDefault "No location provided" user.location) ]
+                        , p []
+                            [ case user.blog of
+                                Just blogUrl ->
+                                    let
+                                        url =
+                                            if String.startsWith "http://" blogUrl || String.startsWith "https://" blogUrl then
+                                                blogUrl
+
+                                            else
+                                                "https://" ++ blogUrl
+                                    in
+                                    a [ href url, target "_blank" ] [ text blogUrl ]
+
+                                Nothing ->
+                                    text "No blog provided"
+                            ]
+                        , img
+                            [ class "avatar"
+                            , src (Maybe.withDefault "" user.avatar_url)
+                            , alt ("Photo of " ++ user.login)
+                            ]
+                            []
                         ]
-                    , p [] [ text (Maybe.withDefault "No bio provided" user.bio) ]
-                    , p [] [ text (Maybe.withDefault "No location provided" user.location) ]
-                    , p []
-                        [ case user.blog of
-                            Just blogUrl ->
-                                let
-                                    url =
-                                        if String.startsWith "http://" blogUrl || String.startsWith "https://" blogUrl then
-                                            blogUrl
 
-                                        else
-                                            "https://" ++ blogUrl
-                                in
-                                a [ href url, target "_blank" ] [ text blogUrl ]
-
-                            Nothing ->
-                                text "No blog provided"
-                        ]
-                    , img
-                        [ class "avatar"
-                        , src (Maybe.withDefault "" user.avatar_url)
-                        , alt ("Photo of " ++ user.login)
-                        ]
-                        []
-                    ]
+                _ ->
+                    text ""
         ]
