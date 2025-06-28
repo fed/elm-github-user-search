@@ -2,6 +2,7 @@ module UserProfile exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as Decode
 
@@ -20,11 +21,14 @@ type alias User =
 type alias Model =
     { user : Maybe User
     , error : Maybe String
+    , username : String
     }
 
 
 type Msg
     = GotUser (Result Http.Error User)
+    | UsernameInput String
+    | Submit
 
 
 userDecoder : Decode.Decoder User
@@ -41,17 +45,29 @@ userDecoder =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { user = Nothing, error = Nothing }
-    , Http.get
-        { url = "https://api.github.com/users/fed"
-        , expect = Http.expectJson GotUser userDecoder
-        }
+    ( { user = Nothing, error = Nothing, username = "" }
+    , Cmd.none
     )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        UsernameInput name ->
+            ( { model | username = name }, Cmd.none )
+
+        Submit ->
+            if String.isEmpty model.username then
+                ( { model | error = Just "Please enter a username." }, Cmd.none )
+
+            else
+                ( { model | error = Nothing, user = Nothing }
+                , Http.get
+                    { url = "https://api.github.com/users/" ++ model.username
+                    , expect = Http.expectJson GotUser userDecoder
+                    }
+                )
+
         GotUser (Ok user) ->
             ( { model | user = Just user, error = Nothing }, Cmd.none )
 
@@ -79,33 +95,53 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    case ( model.user, model.error ) of
-        ( Nothing, Nothing ) ->
-            text "Loading..."
-
-        ( Nothing, Just err ) ->
-            div [ class "error" ] [ text err ]
-
-        ( Just user, _ ) ->
-            div []
-                [ h1 [] [ text (Maybe.withDefault user.login user.name) ]
-                , p []
-                    [ a [ href user.html_url, target "_blank" ] [ strong [] [ text ("@" ++ user.login) ] ]
-                    ]
-                , p [] [ text (Maybe.withDefault "No bio provided" user.bio) ]
-                , p [] [ text (Maybe.withDefault "No location provided" user.location) ]
-                , p []
-                    [ case user.blog of
-                        Just blogUrl ->
-                            a [ href ("https://" ++ blogUrl), target "_blank" ] [ text blogUrl ]
-
-                        Nothing ->
-                            text "No blog provided"
-                    ]
-                , img
-                    [ class "avatar"
-                    , src (Maybe.withDefault "" user.avatar_url)
-                    , alt ("Photo of " ++ user.login)
-                    ]
-                    []
+    div []
+        [ Html.form [ onSubmit Submit ]
+            [ input
+                [ type_ "text"
+                , placeholder "GitHub username"
+                , value model.username
+                , onInput UsernameInput
                 ]
+                []
+            , button [ type_ "submit" ] [ text "Search" ]
+            ]
+        , case ( model.user, model.error ) of
+            ( Nothing, Nothing ) ->
+                text "Loading..."
+
+            ( Nothing, Just err ) ->
+                div [ class "error" ] [ text err ]
+
+            ( Just user, _ ) ->
+                div []
+                    [ h1 [] [ text (Maybe.withDefault user.login user.name) ]
+                    , p []
+                        [ a [ href user.html_url, target "_blank" ] [ strong [] [ text ("@" ++ user.login) ] ]
+                        ]
+                    , p [] [ text (Maybe.withDefault "No bio provided" user.bio) ]
+                    , p [] [ text (Maybe.withDefault "No location provided" user.location) ]
+                    , p []
+                        [ case user.blog of
+                            Just blogUrl ->
+                                let
+                                    url =
+                                        if String.startsWith "http://" blogUrl || String.startsWith "https://" blogUrl then
+                                            blogUrl
+
+                                        else
+                                            "https://" ++ blogUrl
+                                in
+                                a [ href url, target "_blank" ] [ text blogUrl ]
+
+                            Nothing ->
+                                text "No blog provided"
+                        ]
+                    , img
+                        [ class "avatar"
+                        , src (Maybe.withDefault "" user.avatar_url)
+                        , alt ("Photo of " ++ user.login)
+                        ]
+                        []
+                    ]
+        ]
